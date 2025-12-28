@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+commit_msg_file="$1"
+
+if ! grep -qi "^Signed-off-by: " "$commit_msg_file"; then
+  echo "DCO sign-off is required. Please add a Signed-off-by line."
+  echo "Example: git commit -s"
+  exit 1
+fi

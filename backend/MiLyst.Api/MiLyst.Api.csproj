@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BuildClientApp>true</BuildClientApp>
+    <ClientAppDir>$(MSBuildProjectDirectory)/../../frontend</ClientAppDir>
+    <ClientAppDistDir>$(ClientAppDir)/dist</ClientAppDistDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.2.0" />
+  </ItemGroup>
+
+  <Target Name="BuildAndCopyClientApp" BeforeTargets="Publish" Condition="'$(BuildClientApp)' == 'true'">
+    <Exec WorkingDirectory="$(ClientAppDir)" Command="npm ci" Condition="Exists('$(ClientAppDir)/package-lock.json')" />
+    <Exec WorkingDirectory="$(ClientAppDir)" Command="npm install" Condition="!Exists('$(ClientAppDir)/package-lock.json')" />
+    <Exec WorkingDirectory="$(ClientAppDir)" Command="npm run build" />
+
+    <MakeDir Directories="$(MSBuildProjectDirectory)/wwwroot" />
+
+    <ItemGroup>
+      <ClientDistFiles Include="$(ClientAppDistDir)/**/*.*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(ClientDistFiles)" DestinationFiles="@(ClientDistFiles->'$(MSBuildProjectDirectory)/wwwroot/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

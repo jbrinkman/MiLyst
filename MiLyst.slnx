@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/MiLyst.Api/MiLyst.Api.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,219 @@
+version: '3'
+
+vars:
+  FRONTEND_DIR: frontend
+  BACKEND_PROJECT: backend/MiLyst.Api
+  TASK_DIR: .task
+
+  FRONTEND_PID: .task/frontend.pid
+  BACKEND_PID: .task/backend.pid
+
+  FRONTEND_LOG: .task/frontend.log
+  BACKEND_LOG: .task/backend.log
+
+tasks:
+  default:
+    cmds:
+      - task -l
+    silent: true
+
+  init:
+    cmds:
+      - mkdir -p {{.TASK_DIR}}
+    status:
+      - test -d {{.TASK_DIR}}
+
+  deps:
+    deps:
+      - deps:root
+      - deps:frontend
+      - deps:backend
+
+  deps:root:
+    cmds:
+      - npm ci
+
+  deps:frontend:
+    cmds:
+      - npm --prefix {{.FRONTEND_DIR}} ci
+
+  deps:backend:
+    cmds:
+      - dotnet restore {{.BACKEND_PROJECT}}
+
+  build:
+    deps:
+      - build:backend
+      - build:frontend
+
+  build:frontend:
+    cmds:
+      - npm --prefix {{.FRONTEND_DIR}} run build
+
+  build:backend:
+    cmds:
+      - dotnet build {{.BACKEND_PROJECT}} -c Release
+
+  test:
+    deps:
+      - test:backend
+      - test:frontend
+
+  test:backend:
+    cmds:
+      - |
+          TEST_PROJ=$(find backend \( -name '*Test*.csproj' -o -name '*Tests*.csproj' \) -print -quit 2>/dev/null || true)
+          if [ -n "$TEST_PROJ" ]; then
+            dotnet test "$TEST_PROJ" -c Release
+          else
+            echo "No backend test projects found; skipping."
+          fi
+
+  test:frontend:
+    cmds:
+      - echo "No frontend tests configured; skipping."
+
+  dev:
+    desc: Run backend in the foreground (it starts Vite automatically in Development)
+    cmds:
+      - dotnet run --project {{.BACKEND_PROJECT}}
+
+  dev:frontend:
+    cmds:
+      - npm --prefix {{.FRONTEND_DIR}} run dev -- --host
+
+  dev:backend:
+    cmds:
+      - dotnet run --project {{.BACKEND_PROJECT}}
+
+  start:
+    deps:
+      - start:backend
+
+  start:backend:
+    deps:
+      - init
+    cmds:
+      - |
+          if [ -f {{.BACKEND_PID}} ] && kill -0 "$(cat {{.BACKEND_PID}})" 2>/dev/null; then
+            echo "Backend already running (pid $(cat {{.BACKEND_PID}}))."
+            exit 0
+          fi
+          rm -f {{.BACKEND_PID}}
+          nohup dotnet run --project {{.BACKEND_PROJECT}} > {{.BACKEND_LOG}} 2>&1 &
+          echo $! > {{.BACKEND_PID}}
+          echo "Backend started (pid $(cat {{.BACKEND_PID}})). Logs: {{.BACKEND_LOG}}"
+
+  start:frontend:
+    deps:
+      - init
+    cmds:
+      - |
+          if [ -f {{.FRONTEND_PID}} ] && kill -0 "$(cat {{.FRONTEND_PID}})" 2>/dev/null; then
+            echo "Frontend already running (pid $(cat {{.FRONTEND_PID}}))."
+            exit 0
+          fi
+          rm -f {{.FRONTEND_PID}}
+          nohup npm --prefix {{.FRONTEND_DIR}} run dev -- --host > {{.FRONTEND_LOG}} 2>&1 &
+          echo $! > {{.FRONTEND_PID}}
+          echo "Frontend started (pid $(cat {{.FRONTEND_PID}})). Logs: {{.FRONTEND_LOG}}"
+
+  stop:
+    deps:
+      - stop:frontend
+      - stop:backend
+
+  stop:backend:
+    deps:
+      - init
+    cmds:
+      - |
+          if [ ! -f {{.BACKEND_PID}} ]; then
+            echo "Backend PID file not found; nothing to stop."
+            exit 0
+          fi
+          PID=$(cat {{.BACKEND_PID}})
+          if ! kill -0 "$PID" 2>/dev/null; then
+            rm -f {{.BACKEND_PID}}
+            echo "Backend not running; cleaned stale PID file."
+            exit 0
+          fi
+          CHILDREN=$(pgrep -P "$PID" 2>/dev/null || true)
+          if [ -n "$CHILDREN" ]; then
+            kill $CHILDREN 2>/dev/null || true
+          fi
+          kill "$PID" 2>/dev/null || true
+          sleep 1
+          if kill -0 "$PID" 2>/dev/null; then
+            CHILDREN=$(pgrep -P "$PID" 2>/dev/null || true)
+            if [ -n "$CHILDREN" ]; then
+              kill -9 $CHILDREN 2>/dev/null || true
+            fi
+            kill -9 "$PID" 2>/dev/null || true
+          fi
+          rm -f {{.BACKEND_PID}}
+          echo "Backend stopped."
+
+  stop:frontend:
+    deps:
+      - init
+    cmds:
+      - |
+          if [ ! -f {{.FRONTEND_PID}} ]; then
+            echo "Frontend PID file not found; nothing to stop."
+            exit 0
+          fi
+          PID=$(cat {{.FRONTEND_PID}})
+          if ! kill -0 "$PID" 2>/dev/null; then
+            rm -f {{.FRONTEND_PID}}
+            echo "Frontend not running; cleaned stale PID file."
+            exit 0
+          fi
+          CHILDREN=$(pgrep -P "$PID" 2>/dev/null || true)
+          if [ -n "$CHILDREN" ]; then
+            kill $CHILDREN 2>/dev/null || true
+          fi
+          kill "$PID" 2>/dev/null || true
+          sleep 1
+          if kill -0 "$PID" 2>/dev/null; then
+            CHILDREN=$(pgrep -P "$PID" 2>/dev/null || true)
+            if [ -n "$CHILDREN" ]; then
+              kill -9 $CHILDREN 2>/dev/null || true
+            fi
+            kill -9 "$PID" 2>/dev/null || true
+          fi
+          rm -f {{.FRONTEND_PID}}
+          echo "Frontend stopped."
+
+  status:
+    deps:
+      - status:backend
+      - status:frontend
+
+  status:backend:
+    deps:
+      - init
+    cmds:
+      - |
+          if [ -f {{.BACKEND_PID}} ] && kill -0 "$(cat {{.BACKEND_PID}})" 2>/dev/null; then
+            echo "Backend: running (pid $(cat {{.BACKEND_PID}}))"
+          else
+            echo "Backend: stopped"
+          fi
+
+  status:frontend:
+    deps:
+      - init
+    cmds:
+      - |
+          if [ -f {{.FRONTEND_PID}} ] && kill -0 "$(cat {{.FRONTEND_PID}})" 2>/dev/null; then
+            echo "Frontend: running (pid $(cat {{.FRONTEND_PID}}))"
+          else
+            echo "Frontend: stopped"
+          fi
+
+  clean:
+    cmds:
+      - rm -rf {{.TASK_DIR}}
+      - rm -rf frontend/dist
+      - find backend -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +

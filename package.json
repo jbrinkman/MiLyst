@@ -4,6 +4,10 @@
   "description": "A modern task management application with kanban/scrum board interface for tracking and organizing work.",
   "main": "index.js",
   "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "dev:backend": "dotnet run --project backend/MiLyst.Api",
+    "build:backend": "dotnet build backend/MiLyst.Api",
     "test": "echo \"No tests specified\" && exit 0",
     "prepare": "husky"
   },

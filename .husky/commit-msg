@@ -7,3 +7,5 @@ if ! grep -qi "^Signed-off-by: " "$commit_msg_file"; then
   echo "Example: git commit -s"
   exit 1
 fi
+
+npx --no -- commitlint --edit "$commit_msg_file"

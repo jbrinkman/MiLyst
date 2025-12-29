@@ -7,6 +7,12 @@ vars:
 
   BACKEND_URLS: http://127.0.0.1:5145
 
+  POSTGRES_CONTAINER: milyst-postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: milyst
+  POSTGRES_PASSWORD: milyst
+  POSTGRES_DB: milyst_dev
+
   FRONTEND_PID: .task/frontend.pid
   BACKEND_PID: .task/backend.pid
 
@@ -64,12 +70,40 @@ tasks:
   test:backend:
     cmds:
       - |
-        TEST_PROJ=$(find backend \( -name '*Test*.csproj' -o -name '*Tests*.csproj' \) -print -quit 2>/dev/null || true)
-        if [ -n "$TEST_PROJ" ]; then
-          dotnet test "$TEST_PROJ" -c Release
-        else
+        TEST_PROJECTS=$(find backend \( -name '*Test*.csproj' -o -name '*Tests*.csproj' \) -print 2>/dev/null || true)
+        if [ -z "$TEST_PROJECTS" ]; then
           echo "No backend test projects found; skipping."
+          exit 0
         fi
+        if [ "${RUN_INTEGRATION_TESTS:-0}" != "1" ]; then
+          TEST_PROJECTS=$(echo "$TEST_PROJECTS" | grep -v 'IntegrationTests' || true)
+        fi
+        echo "$TEST_PROJECTS" | while read -r proj; do
+          if [ -n "$proj" ]; then
+            echo "Running tests: $proj"
+            dotnet test "$proj" -c Release
+          fi
+        done
+
+  test:integration:
+    desc: Run backend integration tests (requires Docker)
+    cmds:
+      - |
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "Docker is required for integration tests but was not found on PATH."
+          exit 1
+        fi
+        if ! docker info >/dev/null 2>&1; then
+          echo "Docker is required for integration tests but does not appear to be running (docker info failed)."
+          exit 1
+        fi
+        env \
+          -u HTTP_PROXY -u http_proxy \
+          -u HTTPS_PROXY -u https_proxy \
+          -u ALL_PROXY -u all_proxy \
+          TESTCONTAINERS_RYUK_DISABLED=true \
+          RUN_INTEGRATION_TESTS=1 \
+          task test:backend
 
   test:frontend:
     cmds:
@@ -77,14 +111,80 @@ tasks:
 
   dev:
     desc: Run backend in the foreground (it starts Vite automatically in Development)
+    deps:
+      - postgres:start
     cmds:
       - ASPNETCORE_URLS={{.BACKEND_URLS}} dotnet run --project {{.BACKEND_PROJECT}}
+
+  postgres:start:
+    desc: Start local Postgres in Docker for development
+    cmds:
+      - |
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "Docker is required for postgres:start but was not found on PATH."
+          exit 1
+        fi
+
+        if docker ps -a --format '{{"{{.Names}}"}}' | grep -q '^{{.POSTGRES_CONTAINER}}$'; then
+          docker start {{.POSTGRES_CONTAINER}} >/dev/null
+          echo "Postgres container already exists; started {{.POSTGRES_CONTAINER}}."
+          exit 0
+        fi
+
+        docker run -d \
+          --name {{.POSTGRES_CONTAINER}} \
+          -e POSTGRES_USER={{.POSTGRES_USER}} \
+          -e POSTGRES_PASSWORD={{.POSTGRES_PASSWORD}} \
+          -e POSTGRES_DB={{.POSTGRES_DB}} \
+          -p {{.POSTGRES_PORT}}:5432 \
+          postgres:16-alpine >/dev/null
+
+        echo "Postgres started: localhost:{{.POSTGRES_PORT}} (db={{.POSTGRES_DB}} user={{.POSTGRES_USER}})"
+
+  postgres:stop:
+    desc: Stop local Postgres container
+    cmds:
+      - |
+        if docker ps -a --format '{{"{{.Names}}"}}' | grep -q '^{{.POSTGRES_CONTAINER}}$'; then
+          docker stop {{.POSTGRES_CONTAINER}} >/dev/null || true
+          echo "Postgres stopped."
+        else
+          echo "Postgres container not found; nothing to stop."
+        fi
+
+  postgres:rm:
+    desc: Remove local Postgres container (data will be lost)
+    cmds:
+      - |
+        if docker ps -a --format '{{"{{.Names}}"}}' | grep -q '^{{.POSTGRES_CONTAINER}}$'; then
+          docker rm -f {{.POSTGRES_CONTAINER}} >/dev/null || true
+          echo "Postgres container removed."
+        else
+          echo "Postgres container not found; nothing to remove."
+        fi
+
+  postgres:status:
+    desc: Show Postgres container status
+    cmds:
+      - |
+        if docker ps --format '{{"{{.Names}}"}}' | grep -q '^{{.POSTGRES_CONTAINER}}$'; then
+          echo "Postgres: running ({{.POSTGRES_CONTAINER}})"
+        else
+          echo "Postgres: stopped"
+        fi
+
+  db:migrate:
+    desc: Apply EF Core migrations to the configured dev database
+    cmds:
+      - dotnet ef database update --project backend/MiLyst.Infrastructure --startup-project backend/MiLyst.Api
 
   dev:frontend:
     cmds:
       - npm --prefix {{.FRONTEND_DIR}} run dev -- --host
 
   dev:backend:
+    deps:
+      - postgres:start
     cmds:
       - ASPNETCORE_URLS={{.BACKEND_URLS}} dotnet run --project {{.BACKEND_PROJECT}}
 

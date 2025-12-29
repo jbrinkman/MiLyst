@@ -1,0 +1,38 @@
+## 1. Implementation
+- [x] 1.1 Create new backend projects under `backend/`:
+  - `MiLyst.Domain`
+  - `MiLyst.Application`
+  - `MiLyst.Infrastructure`
+  - (keep) `MiLyst.Api` as the composition root
+- [x] 1.2 Update `MiLyst.slnx` to include new projects and organize solution folders.
+- [x] 1.3 Add project references to enforce the dependency rule:
+  - Domain: no references to other MiLyst projects
+  - Application: references Domain
+  - Infrastructure: references Application + Domain
+  - API: references Application + Infrastructure
+- [x] 1.4 Introduce EF Core + Npgsql in Infrastructure:
+  - Add `DbContext` and entity configurations
+  - Add initial migrations
+- [x] 1.5 Add PostgreSQL configuration:
+  - Connection string via `appsettings*.json` and environment override
+  - Ensure `task dev` remains the happy path
+- [x] 1.6 Add tenant context plumbing:
+  - Resolve tenant from request header
+  - Provide a per-request `ITenantContext`
+- [x] 1.7 Enforce tenant isolation at persistence boundaries:
+  - `TenantId` column on tenant-scoped entities
+  - Global query filters (and/or other enforcement strategy) applied consistently
+- [x] 1.8 Migrate existing minimal API endpoints to call Application use cases.
+- [x] 1.9 Add tests:
+  - Unit tests for Domain/Application
+  - Integration tests against PostgreSQL (ephemeral/container-based) validating tenant isolation and migration behavior
+- [x] 1.10 Add developer tooling/tasks for local Postgres lifecycle (start/stop/status) and document usage.
+- [x] 1.11 Validate:
+  - `task build`
+  - `task test`
+  - Confirm API health endpoint still responds at `/api/health`
+
+## 2. Review & Acceptance
+- [x] 2.1 Architecture review: dependency rule is enforced and the API layer does not reference EF Core types directly.
+- [x] 2.2 Persistence review: application uses EF Core with PostgreSQL, migrations can be created/applied, and tenant scoping is consistently enforced.
+- [x] 2.3 Dev workflow review: a clean checkout can reach a working dev environment with minimal steps and without manual tinkering.

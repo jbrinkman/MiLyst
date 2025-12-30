@@ -117,7 +117,12 @@ static async Task ApplyMigrationsAsync(WebApplication app)
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Failed to apply database migrations.");
+        app.Logger.LogError(ex, "Failed to apply database migrations.");
+        if (app.Environment.IsDevelopment())
+        {
+            // In development, fail fast so schema issues are immediately visible.
+            throw;
+        }
     }
 }
 

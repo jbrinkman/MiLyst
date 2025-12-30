@@ -14,7 +14,6 @@ public sealed class TenantResolutionMiddleware : IMiddleware
     public Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         var tenantContext = context.RequestServices.GetRequiredService<TenantContext>();
-        tenantContext.Clear();
 
         if (context.Request.Headers.TryGetValue(_options.HeaderName, out var values))
         {

@@ -6,11 +6,11 @@ namespace MiLyst.Domain.Tests.Tenancy;
 public sealed class TenantScopedTests
 {
     [Fact]
-    public void TenantScopedRecord_AllowsTenantIdToBeSet()
+    public void TenantScopedRecord_HasNonPublicTenantIdSetter()
     {
-        var tenantId = Guid.NewGuid();
-        var record = new TenantScopedRecord { TenantId = tenantId };
+        var tenantIdProperty = typeof(TenantScopedRecord).GetProperty(nameof(TenantScopedRecord.TenantId));
+        Assert.NotNull(tenantIdProperty);
 
-        Assert.Equal(tenantId, record.TenantId);
+        Assert.False(tenantIdProperty!.SetMethod?.IsPublic ?? false);
     }
 }

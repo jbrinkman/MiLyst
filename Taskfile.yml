@@ -97,11 +97,11 @@ tasks:
           echo "Docker is required for integration tests but does not appear to be running (docker info failed)."
           exit 1
         fi
+        # Clear proxy environment variables because they can interfere with Testcontainers/Docker communication.
         env \
           -u HTTP_PROXY -u http_proxy \
           -u HTTPS_PROXY -u https_proxy \
           -u ALL_PROXY -u all_proxy \
-          TESTCONTAINERS_RYUK_DISABLED=true \
           RUN_INTEGRATION_TESTS=1 \
           task test:backend
 

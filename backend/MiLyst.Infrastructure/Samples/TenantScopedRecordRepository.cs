@@ -16,12 +16,22 @@ public sealed class TenantScopedRecordRepository : ITenantScopedRecordRepository
 
     public async Task AddAsync(TenantScopedRecord record, CancellationToken cancellationToken)
     {
+        if (!_dbContext.HasTenant)
+        {
+            throw new InvalidOperationException("Tenant context is required for tenant-scoped operations.");
+        }
+
         _dbContext.TenantScopedRecords.Add(record);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<TenantScopedRecord>> ListAsync(CancellationToken cancellationToken)
     {
+        if (!_dbContext.HasTenant)
+        {
+            throw new InvalidOperationException("Tenant context is required for tenant-scoped operations.");
+        }
+
         return await _dbContext.TenantScopedRecords
             .AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)

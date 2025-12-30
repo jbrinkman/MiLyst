@@ -20,7 +20,10 @@ public sealed class TenantResolutionMiddleware : IMiddleware
             var raw = values.ToString();
             if (Guid.TryParse(raw, out var tenantId))
             {
-                tenantContext.SetTenant(tenantId);
+                if (tenantId != Guid.Empty)
+                {
+                    tenantContext.SetTenant(tenantId);
+                }
             }
         }
 

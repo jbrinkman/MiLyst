@@ -5,6 +5,7 @@ using MiLyst.Application;
 using MiLyst.Application.Health;
 using MiLyst.Application.Persistence;
 using MiLyst.Application.Samples;
+using MiLyst.Application.Tenancy;
 using MiLyst.Domain.Samples;
 using MiLyst.Infrastructure;
 using Yarp.ReverseProxy.Configuration;
@@ -56,8 +57,20 @@ api.MapGet("/", () => Results.Text("MiLyst API", "text/plain"));
 api.MapGet("/health", () => Results.Ok(GetHealth.Execute()));
 
 var sample = api.MapGroup("/sample");
-sample.MapPost("/records", async (CreateTenantScopedRecordRequest request, ITenantScopedRecordRepository repository, CancellationToken cancellationToken) =>
+sample.MapPost(
+    "/records",
+    async (
+        CreateTenantScopedRecordRequest request,
+        ITenantContext tenantContext,
+        ITenantScopedRecordRepository repository,
+        CancellationToken cancellationToken
+    ) =>
 {
+    if (!tenantContext.HasTenant)
+    {
+        return Results.BadRequest(new { message = "Tenant context is required." });
+    }
+
     var record = new TenantScopedRecord
     {
         Id = Guid.NewGuid(),
@@ -69,8 +82,15 @@ sample.MapPost("/records", async (CreateTenantScopedRecordRequest request, ITena
     return Results.Created($"/api/sample/records/{record.Id}", new { record.Id });
 });
 
-sample.MapGet("/records", async (ITenantScopedRecordRepository repository, CancellationToken cancellationToken) =>
+sample.MapGet(
+    "/records",
+    async (ITenantContext tenantContext, ITenantScopedRecordRepository repository, CancellationToken cancellationToken) =>
 {
+    if (!tenantContext.HasTenant)
+    {
+        return Results.BadRequest(new { message = "Tenant context is required." });
+    }
+
     var records = await repository.ListAsync(cancellationToken);
     return Results.Ok(records);
 });
@@ -217,7 +237,11 @@ static bool IsPortOpen(string host, int port, TimeSpan timeout)
         var task = client.ConnectAsync(host, port);
         return task.Wait(timeout) && client.Connected;
     }
-    catch
+    catch (SocketException)
+    {
+        return false;
+    }
+    catch (AggregateException ex) when (ex.InnerException is SocketException)
     {
         return false;
     }

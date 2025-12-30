@@ -6,7 +6,7 @@ public sealed class TenantScopedRecord : ITenantScoped
 {
     public Guid Id { get; set; }
 
-    public Guid TenantId { get; init; }
+    public Guid TenantId { get; private set; }
 
     public string? Value { get; set; }
 

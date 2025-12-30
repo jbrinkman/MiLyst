@@ -38,7 +38,7 @@ public sealed class ApplicationDbContext : DbContext
 
             b.HasIndex(x => new { x.TenantId, x.CreatedAt });
 
-            b.HasQueryFilter(x => HasTenant && x.TenantId == TenantId);
+            b.HasQueryFilter(x => x.TenantId == TenantId);
         });
     }
 
@@ -50,16 +50,23 @@ public sealed class ApplicationDbContext : DbContext
 
     private void ApplyTenantIds()
     {
+        var tenantScopedEntries = ChangeTracker.Entries<ITenantScoped>().ToList();
+
         if (!_hasTenant)
         {
+            if (tenantScopedEntries.Any(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            {
+                throw new InvalidOperationException("Tenant-scoped changes cannot be saved without a tenant context.");
+            }
+
             return;
         }
 
-        foreach (var entry in ChangeTracker.Entries<ITenantScoped>())
+        foreach (var entry in tenantScopedEntries)
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.TenantId = _tenantId;
+                entry.Property(nameof(ITenantScoped.TenantId)).CurrentValue = _tenantId;
             }
 
             if (entry.State == EntityState.Modified)

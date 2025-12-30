@@ -16,6 +16,11 @@ public sealed class TenantContext : ITenantContext
 
     internal void SetTenant(Guid tenantId)
     {
+        if (tenantId == Guid.Empty)
+        {
+            throw new ArgumentException("tenantId cannot be Guid.Empty", nameof(tenantId));
+        }
+
         TenantId = tenantId;
         HasTenant = true;
     }

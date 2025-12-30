@@ -111,11 +111,6 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
             return true;
         }
 
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED")))
-        {
-            Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
-        }
-
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         var candidates = new[]
@@ -152,7 +147,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
                     return;
                 }
             }
-            catch
+            catch (SocketException)
             {
                 // ignore and retry
             }

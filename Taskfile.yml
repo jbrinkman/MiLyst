@@ -125,9 +125,29 @@ tasks:
           exit 1
         fi
 
+        wait_for_postgres() {
+          local timeout_seconds=20
+          local start_ts
+          start_ts=$(date +%s)
+
+          while true; do
+            if docker exec {{.POSTGRES_CONTAINER}} pg_isready -U {{.POSTGRES_USER}} -d {{.POSTGRES_DB}} >/dev/null 2>&1; then
+              break
+            fi
+
+            if [ $(( $(date +%s) - start_ts )) -ge $timeout_seconds ]; then
+              echo "Timed out waiting for Postgres to become ready."
+              exit 1
+            fi
+
+            sleep 0.5
+          done
+        }
+
         if docker ps -a --format '{{"{{.Names}}"}}' | grep -q '^{{.POSTGRES_CONTAINER}}$'; then
-          docker start {{.POSTGRES_CONTAINER}} >/dev/null
-          echo "Postgres container already exists; started {{.POSTGRES_CONTAINER}}."
+          docker start {{.POSTGRES_CONTAINER}} >/dev/null 2>&1 || true
+          wait_for_postgres
+          echo "Postgres container already exists; ready: {{.POSTGRES_CONTAINER}}."
           exit 0
         fi
 
@@ -138,6 +158,8 @@ tasks:
           -e POSTGRES_DB={{.POSTGRES_DB}} \
           -p {{.POSTGRES_PORT}}:5432 \
           postgres:16-alpine >/dev/null
+
+        wait_for_postgres
 
         echo "Postgres started: localhost:{{.POSTGRES_PORT}} (db={{.POSTGRES_DB}} user={{.POSTGRES_USER}})"
 

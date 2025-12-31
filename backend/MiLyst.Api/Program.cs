@@ -57,20 +57,24 @@ api.MapGet("/", () => Results.Text("MiLyst API", "text/plain"));
 api.MapGet("/health", () => Results.Ok(GetHealth.Execute()));
 
 var sample = api.MapGroup("/sample");
-sample.MapPost(
-    "/records",
-    async (
-        CreateTenantScopedRecordRequest request,
-        ITenantContext tenantContext,
-        ITenantScopedRecordRepository repository,
-        CancellationToken cancellationToken
-    ) =>
+sample.AddEndpointFilter(async (context, next) =>
 {
+    var tenantContext = context.HttpContext.RequestServices.GetRequiredService<ITenantContext>();
     if (!tenantContext.HasTenant)
     {
         return Results.BadRequest(new { message = "Tenant context is required." });
     }
 
+    return await next(context);
+});
+sample.MapPost(
+    "/records",
+    async (
+        CreateTenantScopedRecordRequest request,
+        ITenantScopedRecordRepository repository,
+        CancellationToken cancellationToken
+    ) =>
+{
     var record = new TenantScopedRecord
     {
         Id = Guid.NewGuid(),
@@ -84,13 +88,8 @@ sample.MapPost(
 
 sample.MapGet(
     "/records",
-    async (ITenantContext tenantContext, ITenantScopedRecordRepository repository, CancellationToken cancellationToken) =>
+    async (ITenantScopedRecordRepository repository, CancellationToken cancellationToken) =>
 {
-    if (!tenantContext.HasTenant)
-    {
-        return Results.BadRequest(new { message = "Tenant context is required." });
-    }
-
     var records = await repository.ListAsync(cancellationToken);
     return Results.Ok(records);
 });

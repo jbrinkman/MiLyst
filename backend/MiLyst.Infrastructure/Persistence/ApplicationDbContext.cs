@@ -7,19 +7,17 @@ namespace MiLyst.Infrastructure.Persistence;
 
 public sealed class ApplicationDbContext : DbContext
 {
-    private readonly Guid _tenantId;
-    private readonly bool _hasTenant;
+    private readonly ITenantContext _tenantContext;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantContext tenantContext)
         : base(options)
     {
-        _tenantId = tenantContext.TenantId;
-        _hasTenant = tenantContext.HasTenant;
+        _tenantContext = tenantContext;
     }
 
-    public Guid TenantId => _tenantId;
+    public Guid TenantId => _tenantContext.TenantId;
 
-    public bool HasTenant => _hasTenant;
+    public bool HasTenant => _tenantContext.HasTenant;
 
     public DbSet<TenantScopedRecord> TenantScopedRecords => Set<TenantScopedRecord>();
 
@@ -48,11 +46,29 @@ public sealed class ApplicationDbContext : DbContext
         return base.SaveChangesAsync(cancellationToken);
     }
 
+    public override int SaveChanges()
+    {
+        ApplyTenantIds();
+        return base.SaveChanges();
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ApplyTenantIds();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        ApplyTenantIds();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
     private void ApplyTenantIds()
     {
         var tenantScopedEntries = ChangeTracker.Entries<ITenantScoped>().ToList();
 
-        if (!_hasTenant)
+        if (!HasTenant)
         {
             if (tenantScopedEntries.Any(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
             {
@@ -66,7 +82,7 @@ public sealed class ApplicationDbContext : DbContext
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Property(nameof(ITenantScoped.TenantId)).CurrentValue = _tenantId;
+                entry.Property(nameof(ITenantScoped.TenantId)).CurrentValue = TenantId;
             }
 
             if (entry.State == EntityState.Modified)
@@ -79,6 +95,4 @@ public sealed class ApplicationDbContext : DbContext
             }
         }
     }
-
-
 }

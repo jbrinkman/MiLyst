@@ -18,12 +18,9 @@ public sealed class TenantResolutionMiddleware : IMiddleware
         if (context.Request.Headers.TryGetValue(_options.HeaderName, out var values))
         {
             var raw = values.ToString();
-            if (Guid.TryParse(raw, out var tenantId))
+            if (Guid.TryParse(raw, out var tenantId) && tenantId != Guid.Empty)
             {
-                if (tenantId != Guid.Empty)
-                {
-                    tenantContext.SetTenant(tenantId);
-                }
+                tenantContext.SetTenant(tenantId);
             }
         }
 

@@ -14,11 +14,7 @@ public static class DependencyInjection
     {
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidOperationException("Missing connection string 'DefaultConnection'. Configure ConnectionStrings:DefaultConnection.");
-            }
+            var connectionString = ConnectionStringHelper.GetDefaultConnectionString(configuration);
             options.UseNpgsql(connectionString);
         });
 
@@ -26,5 +22,21 @@ public static class DependencyInjection
         services.AddScoped<ITenantScopedRecordRepository, TenantScopedRecordRepository>();
 
         return services;
+    }
+}
+
+internal static class ConnectionStringHelper
+{
+    internal static string GetDefaultConnectionString(IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Missing connection string 'DefaultConnection'. Configure ConnectionStrings:DefaultConnection (or ConnectionStrings__DefaultConnection)."
+            );
+        }
+
+        return connectionString;
     }
 }

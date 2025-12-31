@@ -16,6 +16,6 @@ description: Review and address each comment on a pull request.
  b. Analyze the file and the line range.
  c. If you don't understand the comment, do not make a change. Just ask me for clarification, or to implement it myself.
  d. If you think the change is unnecessary, do not make a change. Provide me your reasoning on why we should not implement the change. Then ask me whether to make the change or to skip the change.
- d. If you think you can make the change, and you agree that the change is necessary, make the change BEFORE moving onto the next comment.
+ e. If you think you can make the change, and you agree that the change is necessary, make the change BEFORE moving onto the next comment.
 
 5. After all comments are processed, summarize what you did, and which comments need the USER's attention.

@@ -1,8 +1,20 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using MiLyst.Api.Tenancy;
+using MiLyst.Application;
+using MiLyst.Application.Health;
+using MiLyst.Application.Persistence;
+using MiLyst.Application.Samples;
+using MiLyst.Application.Tenancy;
+using MiLyst.Domain.Samples;
+using MiLyst.Infrastructure;
 using Yarp.ReverseProxy.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApplication();
+builder.Services.AddTenancy(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 if (builder.Environment.IsDevelopment())
 {
@@ -33,9 +45,54 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    await ApplyMigrationsAsync(app);
+}
+
+app.UseMiddleware<TenantResolutionMiddleware>();
+
 var api = app.MapGroup("/api");
 api.MapGet("/", () => Results.Text("MiLyst API", "text/plain"));
-api.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+api.MapGet("/health", () => Results.Ok(GetHealth.Execute()));
+
+var sample = api.MapGroup("/sample");
+sample.AddEndpointFilter(async (context, next) =>
+{
+    var tenantContext = context.HttpContext.RequestServices.GetRequiredService<ITenantContext>();
+    if (!tenantContext.HasTenant)
+    {
+        return Results.BadRequest(new { message = "Tenant context is required." });
+    }
+
+    return await next(context);
+});
+sample.MapPost(
+    "/records",
+    async (
+        CreateTenantScopedRecordRequest request,
+        ITenantScopedRecordRepository repository,
+        CancellationToken cancellationToken
+    ) =>
+{
+    var record = new TenantScopedRecord
+    {
+        Id = Guid.NewGuid(),
+        Value = request.Value,
+        CreatedAt = DateTimeOffset.UtcNow,
+    };
+
+    await repository.AddAsync(record, cancellationToken);
+    return Results.Created($"/api/sample/records/{record.Id}", new { record.Id });
+});
+
+sample.MapGet(
+    "/records",
+    async (ITenantScopedRecordRepository repository, CancellationToken cancellationToken) =>
+{
+    var records = await repository.ListAsync(cancellationToken);
+    return Results.Ok(records);
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -67,6 +124,26 @@ else
 }
 
 app.Run();
+
+static async Task ApplyMigrationsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var migrator = scope.ServiceProvider.GetRequiredService<IDatabaseMigrator>();
+
+    try
+    {
+        await migrator.MigrateAsync(CancellationToken.None);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Failed to apply database migrations.");
+        if (app.Environment.IsDevelopment())
+        {
+            // In development, fail fast so schema issues are immediately visible.
+            throw;
+        }
+    }
+}
 
 static Process? StartViteDevServer(string backendProjectDir, ILogger logger)
 {
@@ -159,8 +236,16 @@ static bool IsPortOpen(string host, int port, TimeSpan timeout)
         var task = client.ConnectAsync(host, port);
         return task.Wait(timeout) && client.Connected;
     }
-    catch
+    catch (SocketException)
+    {
+        return false;
+    }
+    catch (AggregateException ex) when (ex.InnerException is SocketException)
     {
         return false;
     }
 }
+
+public sealed record CreateTenantScopedRecordRequest(string? Value);
+
+public partial class Program;

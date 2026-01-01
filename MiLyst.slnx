@@ -1,5 +1,14 @@
 <Solution>
   <Folder Name="/backend/">
     <Project Path="backend/MiLyst.Api/MiLyst.Api.csproj" />
+    <Project Path="backend/MiLyst.Domain/MiLyst.Domain.csproj" />
+    <Project Path="backend/MiLyst.Application/MiLyst.Application.csproj" />
+    <Project Path="backend/MiLyst.Infrastructure/MiLyst.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/backend/">
+    <Project Path="tests/backend/MiLyst.Domain.Tests/MiLyst.Domain.Tests.csproj" />
+    <Project Path="tests/backend/MiLyst.Application.Tests/MiLyst.Application.Tests.csproj" />
+    <Project Path="tests/backend/MiLyst.Infrastructure.Tests/MiLyst.Infrastructure.Tests.csproj" />
+    <Project Path="tests/backend/MiLyst.Api.IntegrationTests/MiLyst.Api.IntegrationTests.csproj" />
   </Folder>
 </Solution>

@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>MiLyst-4c6e9b6d-7ed0-4db5-a3b7-9c0d5fdd61cc</UserSecretsId>
     <BuildClientApp>true</BuildClientApp>
     <ClientAppDir>$(MSBuildProjectDirectory)/../../frontend</ClientAppDir>
     <ClientAppDistDir>$(ClientAppDir)/dist</ClientAppDistDir>
@@ -11,6 +12,15 @@
 
   <ItemGroup>
     <PackageReference Include="Yarp.ReverseProxy" Version="2.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiLyst.Application\MiLyst.Application.csproj" />
+    <ProjectReference Include="..\MiLyst.Infrastructure\MiLyst.Infrastructure.csproj" />
   </ItemGroup>
 
   <Target Name="BuildAndCopyClientApp" BeforeTargets="Publish" Condition="'$(BuildClientApp)' == 'true'">

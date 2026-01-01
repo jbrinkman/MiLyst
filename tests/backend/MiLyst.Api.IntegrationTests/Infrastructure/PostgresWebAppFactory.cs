@@ -14,6 +14,9 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
     private const string Username = "milyst";
     private const string Password = "milyst";
 
+    private string? _originalDockerHost;
+    private bool _dockerHostSetByFactory;
+
     private int? _mappedPort;
 
     private PostgreSqlContainer? _postgres;
@@ -55,6 +58,11 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
 
     async Task IAsyncLifetime.DisposeAsync()
     {
+        if (_dockerHostSetByFactory)
+        {
+            Environment.SetEnvironmentVariable("DOCKER_HOST", _originalDockerHost);
+        }
+
         if (!IsAvailable)
         {
             return;
@@ -96,7 +104,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         });
     }
 
-    private static bool TryConfigureDockerHost(out string? unavailableReason)
+    private bool TryConfigureDockerHost(out string? unavailableReason)
     {
         unavailableReason = null;
 
@@ -105,6 +113,8 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         {
             return true;
         }
+
+        _originalDockerHost = dockerHost;
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -128,6 +138,7 @@ public sealed class PostgresWebAppFactory : WebApplicationFactory<Program>, IAsy
         }
 
         Environment.SetEnvironmentVariable("DOCKER_HOST", $"unix://{socketPath}");
+        _dockerHostSetByFactory = true;
         return true;
     }
 

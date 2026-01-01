@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using MiLyst.Api.Contracts;
 using MiLyst.Api.Tenancy;
 using MiLyst.Application;
 using MiLyst.Application.Health;
@@ -75,12 +76,12 @@ sample.MapPost(
         CancellationToken cancellationToken
     ) =>
 {
-    var record = new TenantScopedRecord
+    if (request.Value is not null && request.Value.Length > 500)
     {
-        Id = Guid.NewGuid(),
-        Value = request.Value,
-        CreatedAt = DateTimeOffset.UtcNow,
-    };
+        return Results.BadRequest(new { message = "Value must be 500 characters or less." });
+    }
+
+    var record = TenantScopedRecord.Create(request.Value);
 
     await repository.AddAsync(record, cancellationToken);
     return Results.Created($"/api/sample/records/{record.Id}", new { record.Id });
@@ -245,7 +246,5 @@ static bool IsPortOpen(string host, int port, TimeSpan timeout)
         return false;
     }
 }
-
-public sealed record CreateTenantScopedRecordRequest(string? Value);
 
 public partial class Program;

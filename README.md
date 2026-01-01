@@ -19,7 +19,9 @@ A modern task management application with kanban/scrum board interface for track
 
 ### Development
 
-Configure the database connection string (not stored in `appsettings*.json`):
+Configure the database connection string (a local development default is provided in `appsettings*.json`, but you can override it):
+
+The default connection string uses development-only credentials and MUST be overridden for production.
 
 Option A: Use user secrets (recommended for local development):
 

@@ -16,12 +16,7 @@ public sealed class ApplicationDbContextTenantEnforcementTests
         using var db = CreateDbContext(tenantContext);
 
         db.TenantScopedRecords.Add(
-            new TenantScopedRecord
-            {
-                Id = Guid.NewGuid(),
-                Value = "v",
-                CreatedAt = DateTimeOffset.UtcNow,
-            }
+            TenantScopedRecord.Create("v")
         );
 
         var ex = Assert.Throws<InvalidOperationException>(() => db.SaveChanges());
@@ -36,12 +31,7 @@ public sealed class ApplicationDbContextTenantEnforcementTests
 
         using var db = CreateDbContext(tenantContext);
 
-        var record = new TenantScopedRecord
-        {
-            Id = Guid.NewGuid(),
-            Value = "v",
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
+        var record = TenantScopedRecord.Create("v");
 
         db.TenantScopedRecords.Add(record);
         db.SaveChanges();
@@ -57,12 +47,7 @@ public sealed class ApplicationDbContextTenantEnforcementTests
 
         using var db = CreateDbContext(tenantContext);
 
-        var record = new TenantScopedRecord
-        {
-            Id = Guid.NewGuid(),
-            Value = "v",
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
+        var record = TenantScopedRecord.Create("v");
 
         db.TenantScopedRecords.Add(record);
         db.SaveChanges();

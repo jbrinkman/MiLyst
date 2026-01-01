@@ -19,6 +19,20 @@ A modern task management application with kanban/scrum board interface for track
 
 ### Development
 
+Configure the database connection string (not stored in `appsettings*.json`):
+
+Option A: Use user secrets (recommended for local development):
+
+```sh
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=milyst_dev;Username=milyst;Password=milyst" --project backend/MiLyst.Api
+```
+
+Option B: Use an environment variable (recommended for CI/production):
+
+```sh
+export ConnectionStrings__DefaultConnection='Host=localhost;Port=5432;Database=milyst_dev;Username=milyst;Password=milyst'
+```
+
 Install dependencies:
 
 ```sh

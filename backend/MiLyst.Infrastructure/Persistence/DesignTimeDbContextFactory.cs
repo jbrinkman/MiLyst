@@ -12,12 +12,22 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
     {
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
 
-        var configuration = new ConfigurationBuilder()
+        var environmentName =
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? "Production";
+
+        var configurationBuilder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true)
-            .AddJsonFile("appsettings.Development.json", optional: true)
-            .AddEnvironmentVariables()
-            .Build();
+            .AddJsonFile("appsettings.Development.json", optional: true);
+
+        if (environmentName.Equals("Development", StringComparison.OrdinalIgnoreCase))
+        {
+            configurationBuilder.AddUserSecrets<DesignTimeDbContextFactory>(optional: true);
+        }
+
+        var configuration = configurationBuilder.AddEnvironmentVariables().Build();
 
         var connectionString = ConnectionStringHelper.GetDefaultConnectionString(configuration);
 

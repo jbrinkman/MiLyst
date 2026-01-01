@@ -70,7 +70,7 @@ tasks:
   test:backend:
     cmds:
       - |
-        TEST_PROJECTS=$(find backend \( -name '*Test*.csproj' -o -name '*Tests*.csproj' \) -print 2>/dev/null || true)
+        TEST_PROJECTS=$(find tests/backend \( -name '*Test*.csproj' -o -name '*Tests*.csproj' \) -print 2>/dev/null || true)
         if [ -z "$TEST_PROJECTS" ]; then
           echo "No backend test projects found; skipping."
           exit 0
@@ -114,7 +114,7 @@ tasks:
     deps:
       - postgres:start
     cmds:
-      - ASPNETCORE_URLS={{.BACKEND_URLS}} dotnet run --project {{.BACKEND_PROJECT}}
+      - ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development ASPNETCORE_URLS={{.BACKEND_URLS}} dotnet run --project {{.BACKEND_PROJECT}}
 
   postgres:start:
     desc: Start local Postgres in Docker for development
@@ -198,7 +198,7 @@ tasks:
   db:migrate:
     desc: Apply EF Core migrations to the configured dev database
     cmds:
-      - dotnet ef database update --project backend/MiLyst.Infrastructure --startup-project backend/MiLyst.Api
+      - ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development dotnet ef database update --project backend/MiLyst.Infrastructure --startup-project backend/MiLyst.Api
 
   dev:frontend:
     cmds:
@@ -208,7 +208,7 @@ tasks:
     deps:
       - postgres:start
     cmds:
-      - ASPNETCORE_URLS={{.BACKEND_URLS}} dotnet run --project {{.BACKEND_PROJECT}}
+      - ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development ASPNETCORE_URLS={{.BACKEND_URLS}} dotnet run --project {{.BACKEND_PROJECT}}
 
   start:
     deps:
@@ -224,6 +224,8 @@ tasks:
           exit 0
         fi
         rm -f {{.BACKEND_PID}}
+        export ASPNETCORE_ENVIRONMENT=Development
+        export DOTNET_ENVIRONMENT=Development
         export ASPNETCORE_URLS={{.BACKEND_URLS}}
         nohup dotnet run --project {{.BACKEND_PROJECT}} > {{.BACKEND_LOG}} 2>&1 &
         echo $! > {{.BACKEND_PID}}
@@ -341,4 +343,4 @@ tasks:
     cmds:
       - rm -rf {{.TASK_DIR}}
       - rm -rf frontend/dist
-      - find backend -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +
+      - find backend tests/backend -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} +

@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\MiLyst.Application\MiLyst.Application.csproj" />
+        <ProjectReference Include="..\..\..\backend\MiLyst.Application\MiLyst.Application.csproj" />
     </ItemGroup>
 
 </Project>

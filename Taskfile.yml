@@ -198,7 +198,8 @@ tasks:
   db:migrate:
     desc: Apply EF Core migrations to the configured dev database
     cmds:
-      - ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development dotnet ef database update --project backend/MiLyst.Infrastructure --startup-project backend/MiLyst.Api
+      - dotnet tool restore
+      - ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development dotnet tool run dotnet-ef database update --project backend/MiLyst.Infrastructure --startup-project backend/MiLyst.Api
 
   dev:frontend:
     cmds:
